@@ -126,21 +126,48 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
 }
 
 .visual-system {
+  margin-top: 0;
+  padding: var(--space) 0;
   border-bottom: 1px solid var(--line);
 }
 
+.visual-system--fullbleed {
+  position: relative;
+  left: 50%;
+  right: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  margin-right: -50vw;
+}
+
+.visual-system-heading {
+  max-width: var(--max-width);
+  margin: 0 auto 36px;
+  padding: 0 clamp(20px, 4vw, 56px);
+}
+
+.visual-system-bleed {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 10px;
+}
+
 .apple-like-grid {
+  width: 100%;
   display: grid;
-  gap: clamp(10px, 1.4vw, 16px);
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .image-slot {
   position: relative;
+  width: 100%;
   min-height: 220px;
   margin: 0;
   overflow: hidden;
   border: 1px solid rgba(17, 17, 17, 0.08);
-  border-radius: 18px;
+  border-radius: 0;
   background:
     linear-gradient(135deg, rgba(17, 17, 17, 0.028), transparent 34%),
     #f0efeb;
@@ -151,7 +178,6 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
   position: absolute;
   inset: 18px;
   border: 1px solid rgba(17, 17, 17, 0.045);
-  border-radius: 12px;
   pointer-events: none;
 }
 
@@ -179,10 +205,10 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
 
 .image-slot figcaption {
   position: absolute;
-  left: 18px;
-  bottom: 16px;
+  left: 16px;
+  bottom: 14px;
   z-index: 2;
-  color: rgba(17, 17, 17, 0.45);
+  color: rgba(17, 17, 17, 0.52);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -193,18 +219,23 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
   color: rgba(255, 255, 255, 0.48);
 }
 
+.visual-slot-large,
+.visual-slot-wide {
+  width: 100%;
+}
+
 .visual-slot-large {
-  aspect-ratio: 21 / 9;
+  aspect-ratio: 16 / 7;
 }
 
 .visual-slot-wide {
-  aspect-ratio: 16 / 7;
+  aspect-ratio: 16 / 8;
 }
 
 .visual-two-column {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(10px, 1.4vw, 16px);
+  gap: 12px;
 }
 
 .visual-slot-half {
@@ -213,9 +244,10 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
 
 .visual-carousel-shell {
   display: grid;
+  width: 100%;
   gap: 18px;
-  margin-top: clamp(8px, 1vw, 14px);
-  padding-top: clamp(16px, 2vw, 24px);
+  margin-top: 0;
+  padding-top: 12px;
 }
 
 .visual-carousel-header {
@@ -223,6 +255,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
   align-items: end;
   justify-content: space-between;
   gap: 24px;
+  padding: 0 2px;
 }
 
 .visual-carousel-header .section-kicker {
@@ -253,12 +286,14 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
 }
 
 .visual-carousel {
+  width: 100%;
   display: flex;
-  gap: clamp(10px, 1.4vw, 16px);
+  gap: 12px;
   overflow-x: auto;
   padding-bottom: 6px;
-  scroll-padding-left: 1px;
+  scroll-padding-left: 0;
   scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: rgba(17, 17, 17, 0.22) transparent;
 }
@@ -273,36 +308,55 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
 }
 
 .visual-carousel-item {
-  flex: 0 0 calc((100% - 32px) / 3);
+  flex: 0 0 32%;
   min-height: 300px;
   aspect-ratio: 4 / 3;
   scroll-snap-align: start;
 }
 
-@media (max-width: 900px) {
-  .visual-carousel-item {
-    flex-basis: calc((100% - 16px) / 2);
+@media (max-width: 1024px) {
+  .visual-system-bleed {
+    padding: 0 8px;
   }
-}
 
-@media (max-width: 560px) {
-  .apple-like-grid,
   .visual-two-column,
   .visual-carousel {
     gap: 10px;
+  }
+
+  .visual-carousel-item {
+    flex-basis: 48%;
+  }
+}
+
+@media (max-width: 768px) {
+  .visual-system {
+    padding: var(--space) 0;
+  }
+
+  .visual-system-heading {
+    margin-bottom: 20px;
+    padding: 0 16px;
+  }
+
+  .visual-system-bleed {
+    padding: 0 6px;
+  }
+
+  .apple-like-grid,
+  .visual-two-column,
+  .visual-carousel {
+    gap: 8px;
   }
 
   .visual-two-column {
     grid-template-columns: 1fr;
   }
 
-  .image-slot {
-    border-radius: 14px;
-  }
-
   .visual-slot-large,
-  .visual-slot-wide {
-    aspect-ratio: 16 / 10;
+  .visual-slot-wide,
+  .visual-slot-half {
+    aspect-ratio: 4 / 3;
   }
 
   .visual-carousel-header {
@@ -313,5 +367,10 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
   .visual-carousel-item {
     flex-basis: 88%;
     min-height: 250px;
+  }
+
+  .image-slot figcaption {
+    left: 12px;
+    bottom: 12px;
   }
 }

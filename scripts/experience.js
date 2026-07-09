@@ -30,34 +30,44 @@ document.querySelectorAll('[data-carousel]').forEach((carousel) => {
 
 const systemDetailData = {
   sequence: {
-    title: 'Uma gramática visual feita de camadas editáveis.',
-    text: 'A sequência organiza painéis, intervalos e transições como uma estrutura navegável de leitura, memória e participação.'
+    title: 'A sequência organiza a leitura como estrutura navegável.',
+    text: 'Painéis, intervalos e transições compõem uma ordem visual que orienta o percurso do leitor.',
+    image: 'images/imagem1.png',
+    caption: 'Sequência, painéis e transição.'
   },
   rhythm: {
-    title: 'O ritmo nasce da distância entre os quadros.',
-    text: 'Cada pausa, repetição e avanço cria uma cadência visual que conduz o leitor entre tempo, espaço e ação.'
+    title: 'O ritmo cria cadência entre pausa, leitura e avanço.',
+    text: 'A repetição, o espaçamento e a alternância visual modulam o tempo de leitura.',
+    image: 'images/imagem2.png',
+    caption: 'Ritmo visual, pausa e cadência.'
   },
   archive: {
-    title: 'Cada estado pode ser preservado, retomado e reorganizado.',
-    text: 'A obra deixa de ser uma superfície fixa e passa a funcionar como arquivo vivo de versões, escolhas e percursos.'
+    title: 'O arquivo guarda estados possíveis da obra.',
+    text: 'A memória visual permite recuperar, recombinar e reorganizar estados narrativos.',
+    image: 'images/imagem3.png',
+    caption: 'Arquivo, memória e estados narrativos.'
   },
   research: {
-    title: 'A Nona Arte como sistema de investigação.',
-    text: 'Diagramas, páginas, interfaces e mecanismos tornam-se instrumentos para estudar linguagem visual, interação e cultura.'
+    title: 'A pesquisa transforma a página em diagrama.',
+    text: 'A obra pode operar como campo de investigação, anotação, comparação e descoberta.',
+    image: 'images/imagem4.png',
+    caption: 'Pesquisa, diagrama e linguagem visual.'
   },
   interaction: {
     title: 'O leitor deixa rastros na estrutura da obra.',
-    text: 'A participação transforma a página em ambiente: cada clique pode revelar, recombinar ou deslocar estados narrativos.'
+    text: 'A participação transforma a página em ambiente: cada clique pode revelar, recombinar ou deslocar estados narrativos.',
+    image: 'images/imagem5.png',
+    caption: 'Participação, clique e interação.'
   }
 };
 
-const systemDetail = document.querySelector('[data-system-detail]');
+const systemDetailRoot = document.querySelector('[data-system-detail]');
 
-if (systemDetail) {
-  const pills = systemDetail.querySelectorAll('[data-detail]');
-  const figures = systemDetail.querySelectorAll('[data-detail-figure]');
-  const title = systemDetail.querySelector('[data-detail-title]');
-  const text = systemDetail.querySelector('[data-detail-text]');
+if (systemDetailRoot) {
+  const pills = systemDetailRoot.querySelectorAll('.system-detail__pill');
+  const figures = systemDetailRoot.querySelectorAll('.system-detail__figure');
+  const title = systemDetailRoot.querySelector('[data-detail-title]');
+  const text = systemDetailRoot.querySelector('[data-detail-text]');
 
   function setSystemDetail(key) {
     const data = systemDetailData[key];
@@ -70,11 +80,27 @@ if (systemDetail) {
     });
 
     figures.forEach((figure) => {
-      figure.classList.toggle('is-active', figure.dataset.detailFigure === key);
+      const isActive = figure.dataset.detailFigure === key;
+      figure.classList.toggle('is-active', isActive);
+
+      if (isActive) {
+        figure.style.backgroundImage = `url("${data.image}")`;
+        figure.classList.add('has-background-image');
+
+        const caption = figure.querySelector('figcaption');
+        if (caption) {
+          caption.textContent = data.caption;
+        }
+      }
     });
 
-    title.textContent = data.title;
-    text.textContent = data.text;
+    if (title) {
+      title.textContent = data.title;
+    }
+
+    if (text) {
+      text.textContent = data.text;
+    }
   }
 
   pills.forEach((pill) => {
@@ -82,4 +108,6 @@ if (systemDetail) {
       setSystemDetail(pill.dataset.detail);
     });
   });
+
+  setSystemDetail('sequence');
 }

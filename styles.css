@@ -290,58 +290,28 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding-bottom: 0;
+  padding-bottom: 6px;
   scroll-padding-left: 0;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(17, 17, 17, 0.22) transparent;
 }
 
 .visual-carousel::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.visual-carousel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.2);
 }
 
 .visual-carousel-item {
-  flex: 0 0 min(72vw, 720px);
-  min-height: 0;
-  aspect-ratio: 2 / 1;
+  flex: 0 0 32%;
+  min-height: 300px;
+  aspect-ratio: 4 / 3;
   scroll-snap-align: start;
-}
-
-.visual-carousel-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.visual-carousel-dots {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 14px;
-  margin-top: 2px;
-}
-
-.visual-carousel-dot {
-  width: 8px;
-  height: 8px;
-  border: 0;
-  border-radius: 999px;
-  padding: 0;
-  background: rgba(0, 0, 0, 0.38);
-  cursor: pointer;
-  transition: width 220ms ease, background 220ms ease, opacity 220ms ease;
-}
-
-.visual-carousel-dot.is-active {
-  width: 32px;
-  background: #000;
-}
-
-.visual-carousel-dot:focus-visible {
-  outline: 2px solid #000;
-  outline-offset: 4px;
 }
 
 @media (max-width: 1024px) {
@@ -355,7 +325,7 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
   }
 
   .visual-carousel-item {
-    flex-basis: 76vw;
+    flex-basis: 48%;
   }
 }
 
@@ -395,8 +365,8 @@ h3 { font-size: clamp(1.35rem, 2vw, 1.85rem); letter-spacing: -0.035em; }
   }
 
   .visual-carousel-item {
-    flex-basis: 88vw;
-    aspect-ratio: 16 / 9;
+    flex-basis: 88%;
+    min-height: 250px;
   }
 
   .image-slot figcaption {

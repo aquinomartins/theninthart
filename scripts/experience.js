@@ -1,113 +1,130 @@
-const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const revealItems = document.querySelectorAll('.reveal');
-if ('IntersectionObserver' in window) {
-  const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
-    if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }
-  }), { threshold: 0.12 });
-  revealItems.forEach((item) => observer.observe(item));
-} else { revealItems.forEach((item) => item.classList.add('is-visible')); }
+import { assets } from './modules/asset-manifest.js';
+import { createDetailCarousel } from './modules/carousel.js';
+import { renderKitchen } from './modules/kitchen-renderer.js';
+import { initScrollScenes } from './modules/scroll-scenes.js';
+import { initAdminPanel } from './modules/admin-panel.js';
+import { createSession, updateSession, localPersistence } from './modules/state-store.js';
+import { createPublicSnapshot } from './modules/public-state.js';
+import { createSeed, getDominantEra } from './modules/temporal-engine.js';
 
-document.querySelectorAll('[data-carousel]').forEach((carousel) => {
-  const track = carousel.querySelector('.carousel-track');
-  const prev = carousel.querySelector('[data-prev]');
-  const next = carousel.querySelector('[data-next]');
-  const dots = carousel.querySelector('[data-dots]');
-  const cards = [...track.children];
-  let timer;
-  const step = () => (cards[0]?.getBoundingClientRect().width || track.clientWidth) + 14;
-  const activeIndex = () => Math.round(track.scrollLeft / step());
-  const renderDots = () => { dots.innerHTML = ''; cards.forEach((_, index) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', `Ir para item ${index + 1}`); b.addEventListener('click', () => { stop(); track.scrollTo({ left: index * step(), behavior: prefersReduced ? 'auto' : 'smooth' }); }); dots.appendChild(b); }); updateDots(); };
-  const updateDots = () => [...dots.children].forEach((dot, index) => dot.classList.toggle('is-active', index === activeIndex()));
-  const move = (dir) => { stop(); track.scrollBy({ left: dir * step(), behavior: prefersReduced ? 'auto' : 'smooth' }); };
-  const play = () => { if (prefersReduced || carousel.dataset.autoplay !== 'true') return; timer = window.setInterval(() => { const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4; track.scrollTo({ left: atEnd ? 0 : track.scrollLeft + step(), behavior: 'smooth' }); }, 4200); };
-  const stop = () => { if (timer) window.clearInterval(timer); };
-  prev?.addEventListener('click', () => move(-1)); next?.addEventListener('click', () => move(1));
-  track.addEventListener('scroll', () => window.requestAnimationFrame(updateDots));
-  carousel.addEventListener('mouseenter', stop); carousel.addEventListener('mouseleave', play);
-  carousel.addEventListener('focusin', stop); carousel.addEventListener('touchstart', stop, { passive: true });
-  renderDots(); play();
-});
+const qs = (selector, root = document) => root.querySelector(selector);
+const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-const systemDetailData = {
-  sequence: {
-    title: 'A sequência organiza a leitura como estrutura navegável.',
-    text: 'Painéis, intervalos e transições compõem uma ordem visual que orienta o percurso do leitor.',
-    image: 'images/imagem1.png',
-    caption: 'Sequência, painéis e transição.'
-  },
-  rhythm: {
-    title: 'O ritmo cria cadência entre pausa, leitura e avanço.',
-    text: 'A repetição, o espaçamento e a alternância visual modulam o tempo de leitura.',
-    image: 'images/imagem2.png',
-    caption: 'Ritmo visual, pausa e cadência.'
-  },
-  archive: {
-    title: 'O arquivo guarda estados possíveis da obra.',
-    text: 'A memória visual permite recuperar, recombinar e reorganizar estados narrativos.',
-    image: 'images/imagem3.png',
-    caption: 'Arquivo, memória e estados narrativos.'
-  },
-  research: {
-    title: 'A pesquisa transforma a página em diagrama.',
-    text: 'A obra pode operar como campo de investigação, anotação, comparação e descoberta.',
-    image: 'images/imagem4.png',
-    caption: 'Pesquisa, diagrama e linguagem visual.'
-  },
-  interaction: {
-    title: 'O leitor deixa rastros na estrutura da obra.',
-    text: 'A participação transforma a página em ambiente: cada clique pode revelar, recombinar ou deslocar estados narrativos.',
-    image: 'images/imagem5.png',
-    caption: 'Participação, clique e interação.'
-  }
-};
+async function loadJson(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Não foi possível carregar ${path}`);
+  return response.json();
+}
 
-const systemDetailRoot = document.querySelector('[data-system-detail]');
+async function boot() {
+  hydrateAssetImages();
+  initScrollScenes();
+  const dataset = { eras: await loadJson('data/eras.json'), parts: await loadJson('data/machine-parts.json'), objects: await loadJson('data/kitchen-objects.json'), panels: await loadJson('data/story-panels.json') };
+  let publicSnapshot = await localPersistence.loadPublicSnapshot() || createPublicSnapshot(await localPersistence.loadSessions(), dataset.eras);
+  let session = restoreFromUrl(dataset) || await localPersistence.loadCurrentSession() || createSession(dataset);
+  session = updateSession(session, dataset, {});
 
-if (systemDetailRoot) {
-  const pills = systemDetailRoot.querySelectorAll('.system-detail__pill');
-  const figures = systemDetailRoot.querySelectorAll('.system-detail__figure');
-  const title = systemDetailRoot.querySelector('[data-detail-title]');
-  const text = systemDetailRoot.querySelector('[data-detail-text]');
-
-  function setSystemDetail(key) {
-    const data = systemDetailData[key];
-    if (!data) return;
-
-    pills.forEach((pill) => {
-      const isActive = pill.dataset.detail === key;
-      pill.classList.toggle('is-active', isActive);
-      pill.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    });
-
-    figures.forEach((figure) => {
-      const isActive = figure.dataset.detailFigure === key;
-      figure.classList.toggle('is-active', isActive);
-
-      if (isActive) {
-        figure.style.backgroundImage = `url("${data.image}")`;
-        figure.classList.add('has-background-image');
-
-        const caption = figure.querySelector('figcaption');
-        if (caption) {
-          caption.textContent = data.caption;
-        }
-      }
-    });
-
-    if (title) {
-      title.textContent = data.title;
-    }
-
-    if (text) {
-      text.textContent = data.text;
-    }
+  async function persistAndRender() { await localPersistence.saveSession(session); updateUrl(session); renderAll(); }
+  function renderAll() {
+    const dominant = getDominantEra(session.vector, dataset.eras);
+    document.documentElement.style.setProperty('--temporal-accent', dataset.parts.find((part) => session.selectedParts.includes(part.id))?.accent || dominant.theme.accent || '#0a84ff');
+    qs('[data-hero-subtitle]').textContent = heroLine(dominant, session);
+    qs('[data-dominant-label]').textContent = `Estado dominante: ${dominant.label} · ${Math.round((session.vector[dominant.id] || 0) * 100)}%`;
+    qs('[data-machine-summary]').textContent = dataset.parts.filter((part) => session.selectedParts.includes(part.id)).map((part) => part.summary).at(-1) || 'A máquina aguarda uma peça.';
+    qs('[data-mechanism-copy]').textContent = `A montagem atual puxa a cozinha para ${dominant.label.toLowerCase()} sem apagar rastros das outras eras.`;
+    qs('[data-vector-readout]').textContent = JSON.stringify(session.vector, null, 2);
+    qs('[data-state-summary]').textContent = `Sua linha: ${session.selectedParts.length} peça(s), ${session.selectedObjects.length} objeto(s), dominante ${dominant.label}.`;
+    qs('[data-public-pulse]').textContent = `Cozinha pública: ${Math.round(Math.max(...Object.values(publicSnapshot.vector)) * 100)}% em ${getDominantEra(publicSnapshot.vector, dataset.eras).label}.`;
+    renderBars(qs('[data-bars="individual"]'), session.vector, dataset.eras);
+    renderBars(qs('[data-bars="public"]'), publicSnapshot.vector, dataset.eras);
+    renderObjectList(dataset, session);
+    renderKitchen(qs('[data-kitchen-scene]'), qs('[data-kitchen-status]'), dataset, session, publicSnapshot, dominant, createSeed(publicSnapshot));
+    qsa('[data-toggle-tech]').forEach((button) => button.addEventListener('click', () => { const note = qs('[data-tech-note]'); const open = note.hasAttribute('hidden'); note.toggleAttribute('hidden', !open); button.setAttribute('aria-expanded', String(open)); }, { once: true }));
   }
 
-  pills.forEach((pill) => {
-    pill.addEventListener('click', () => {
-      setSystemDetail(pill.dataset.detail);
-    });
+  createDetailCarousel(qs('[data-machine-carousel]'), dataset.parts, (part, user) => {
+    qs('[data-part-image]').src = assets[part.imageKey] || assets.mechanism;
+    if (user && !session.selectedParts.includes(part.id)) {
+      session = updateSession(session, dataset, { selectedParts: [...session.selectedParts, part.id].slice(-5) });
+      persistAndRender();
+    } else {
+      renderAll();
+    }
   });
 
-  setSystemDetail('sequence');
+  renderObjectList(dataset, session);
+  bindEvents(dataset, () => session, (next) => { session = next; }, async () => { publicSnapshot = await refreshPublic(dataset); renderAll(); });
+  initAdminPanel({ dialog: qs('[data-admin-dialog]'), dataset, persistence: localPersistence, onRestore: () => location.reload() });
+  qs('[data-open-admin]')?.addEventListener('click', () => qs('[data-admin-dialog]').showModal());
+
+  await persistAndRender();
 }
+
+function hydrateAssetImages() {
+  qsa('[data-asset-key]').forEach((image) => {
+    const source = assets[image.dataset.assetKey];
+    if (source && image.getAttribute('src') !== source) image.src = source;
+  });
+}
+
+function renderObjectList(dataset, session) {
+  const root = qs('[data-object-list]');
+  if (!root) return;
+  const dominant = getDominantEra(session.vector, dataset.eras);
+  root.innerHTML = dataset.objects.map((object) => {
+    const version = object.versions.find((item) => item.eraId === dominant.id) || object.versions[0];
+    const selected = session.selectedObjects.includes(object.id);
+    return `<article class="object-card ${selected ? 'is-selected' : ''}"><div class="object-thumb" data-slot="kitchen-object" data-object-id="${object.id}" data-era-id="${version.eraId}">${object.name.slice(0, 2)}</div><h3>${object.name}</h3><p>${object.function}</p><p><strong>${version.label}</strong></p><button type="button" data-toggle-object="${object.id}" aria-pressed="${selected}">${selected ? 'Remover' : 'Selecionar'}</button></article>`;
+  }).join('');
+}
+
+function bindEvents(dataset, getSession, setSession, refresh) {
+  document.addEventListener('click', async (event) => {
+    const toggle = event.target.closest('[data-toggle-object]');
+    if (toggle) {
+      const session = getSession(); const id = toggle.dataset.toggleObject;
+      const selectedObjects = session.selectedObjects.includes(id) ? session.selectedObjects.filter((item) => item !== id) : [...session.selectedObjects, id];
+      setSession(updateSession(session, dataset, { selectedObjects }));
+      await localPersistence.saveSession(getSession()); updateUrl(getSession()); refresh();
+    }
+    if (event.target.closest('[data-complete-session]')) {
+      setSession({ ...getSession(), completed: true, updatedAt: new Date().toISOString() });
+      await localPersistence.saveSession(getSession()); await refresh();
+    }
+    if (event.target.closest('[data-reset-session]')) {
+      setSession(createSession(dataset)); await localPersistence.saveSession(getSession()); updateUrl(getSession()); document.getElementById('machine')?.scrollIntoView({ behavior: 'smooth' }); await refresh();
+    }
+  });
+}
+
+async function refreshPublic(dataset) {
+  const snapshot = createPublicSnapshot(await localPersistence.loadSessions(), dataset.eras);
+  await localPersistence.savePublicSnapshot(snapshot);
+  return snapshot;
+}
+
+function renderBars(root, vector, eras) {
+  if (!root) return;
+  root.innerHTML = eras.map((era) => `<div data-era="${era.id}"><span>${era.label}</span><i style="transform:scaleX(${vector[era.id] || 0})"></i><b>${Math.round((vector[era.id] || 0) * 100)}%</b></div>`).join('');
+}
+
+function heroLine(era, session) {
+  const object = session.selectedObjects.at(-1) || 'forma';
+  return era.id === 'past' ? `O ${object} lembra o bolo antes da chegada.` : era.id === 'future' ? `O ${object} chegou de uma fornada que ainda não aconteceu.` : `O ${object} mantém o presente aberto por alguns quadros.`;
+}
+
+function updateUrl(session) {
+  const params = new URLSearchParams(location.search);
+  params.set('parts', session.selectedParts.join(',')); params.set('objects', session.selectedObjects.join(','));
+  history.replaceState(null, '', `${location.pathname}?${params.toString()}${location.hash}`);
+}
+
+function restoreFromUrl(dataset) {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('parts') && !params.has('objects')) return null;
+  const parts = (params.get('parts') || '').split(',').filter((id) => dataset.parts.some((part) => part.id === id));
+  const objects = (params.get('objects') || '').split(',').filter((id) => dataset.objects.some((object) => object.id === id));
+  return createSession(dataset, { parts: parts.length ? parts : ['sequence'], objects: objects.length ? objects : ['forma'] });
+}
+
+boot().catch((error) => { console.error(error); document.body.insertAdjacentHTML('afterbegin', '<p role="alert" style="padding:1rem;background:#401;color:white">A experiência carregou em modo básico porque um recurso falhou.</p>'); });

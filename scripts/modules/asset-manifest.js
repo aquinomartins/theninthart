@@ -28,19 +28,20 @@ export const IMAGE_ASSETS = {
 };
 
 export const assets = {
-  heroKitchen: 'imagensQuadrinhos/imagemHQ1.png',
-  mechanism: 'imagensQuadrinhos/hq001.png',
-  coexistence: 'imagensQuadrinhos/hq006.png',
-  versatility: 'imagensQuadrinhos/hq003.png',
-  collective: 'imagensQuadrinhos/dde05d0e-2cd7-44e0-a4d5-86981164fa75.png',
-  speed: 'imagensQuadrinhos/hq007.png',
-  coordinated: 'imagensQuadrinhos/hq005.png',
-  continuity: 'imagensQuadrinhos/hq008.png',
-  safety: 'imagensQuadrinhos/ChatGPT Image 11 de jul. de 2026, 17_19_36.png',
-  mechanismsBand: 'imagensQuadrinhos/hq006.png',
-  kitchenBackground: 'imagensQuadrinhos/imagemHQ1.png',
-  kitchenArchitecture: 'imagensQuadrinhos/hq009.png',
-  kitchenTable: 'imagensQuadrinhos/hq008.png',
-  kitchenOven: 'imagensQuadrinhos/hq010.png',
-  kitchenProps: 'imagensQuadrinhos/imagem013.png'
+  heroKitchen: IMAGE_ASSETS.kitchen.background.src,
+  mechanism: IMAGE_ASSETS.panels.mechanism.src,
+  coexistence: IMAGE_ASSETS.panels.coexistence.src,
+  versatility: IMAGE_ASSETS.panels.versatility.src,
+  collective: IMAGE_ASSETS.panels.collective.src,
+  speed: IMAGE_ASSETS.panels.speed.src,
+  coordinated: IMAGE_ASSETS.panels.coordinated.src,
+  continuity: IMAGE_ASSETS.panels.continuity.src,
+  safety: IMAGE_ASSETS.panels.safety.src,
+  mechanismsBand: IMAGE_ASSETS.panels.mechanismsBand.src,
+  floatingElement: IMAGE_ASSETS.floatingElement.src,
+  kitchenBackground: IMAGE_ASSETS.kitchen.background.src,
+  kitchenArchitecture: IMAGE_ASSETS.kitchen.architecture.src,
+  kitchenTable: IMAGE_ASSETS.kitchen.table.src,
+  kitchenOven: IMAGE_ASSETS.kitchen.oven.src,
+  kitchenProps: IMAGE_ASSETS.kitchen.props.src
 };

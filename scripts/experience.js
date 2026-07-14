@@ -6,7 +6,6 @@ import { initAdminPanel } from './modules/admin-panel.js';
 import { createSession, updateSession, localPersistence } from './modules/state-store.js';
 import { createPublicSnapshot } from './modules/public-state.js';
 import { createSeed, getDominantEra } from './modules/temporal-engine.js';
-import { initComicLanding, updateReactiveComicPanels, applyResponsiveLayout } from './comic-layout-engine.js';
 
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -19,9 +18,6 @@ async function loadJson(path) {
 
 async function boot() {
   hydrateAssetImages();
-  initComicLanding();
-  applyResponsiveLayout();
-  addEventListener('resize', applyResponsiveLayout, { passive: true });
   initFloatingNarrative();
   initScrollScenes();
   const dataset = { eras: await loadJson('data/eras.json'), parts: await loadJson('data/machine-parts.json'), objects: await loadJson('data/kitchen-objects.json'), panels: await loadJson('data/story-panels.json') };
@@ -47,7 +43,6 @@ async function boot() {
     renderObjectList(dataset, session);
     renderKitchen(qs('[data-kitchen-scene]'), qs('[data-kitchen-status]'), dataset, session, publicSnapshot, dominant, createSeed(publicSnapshot));
     renderCredentialState(session.credentialStatus);
-    updateReactiveComicPanels({ selectedPart: session.selectedParts.at(-1), selectedObject: session.selectedObjects.at(-1), temporalState: dominant.id, publicState: getDominantEra(publicSnapshot.vector, dataset.eras).id });
     qsa('[data-toggle-tech]').forEach((button) => button.addEventListener('click', () => { const note = qs('[data-tech-note]'); const open = note.hasAttribute('hidden'); note.toggleAttribute('hidden', !open); button.setAttribute('aria-expanded', String(open)); }, { once: true }));
   }
 
@@ -55,8 +50,6 @@ async function boot() {
     qs('[data-part-image]').src = assets[part.imageKey] || assets.mechanism;
     if (user && !session.selectedParts.includes(part.id)) {
       session = updateSession(session, dataset, { selectedParts: [...session.selectedParts, part.id].slice(-5) });
-      pulseNarrative('part');
-      updateReactiveComicPanels({ selectedPart: part.id });
       persistAndRender();
     } else {
       renderAll();
@@ -119,7 +112,6 @@ function bindEvents(dataset, getSession, setSession, refresh) {
       const selectedObjects = session.selectedObjects.includes(id) ? session.selectedObjects.filter((item) => item !== id) : [...session.selectedObjects, id];
       setSession(updateSession(session, dataset, { selectedObjects }));
       pulseNarrative('object');
-      updateReactiveComicPanels({ selectedObject: id });
       await localPersistence.saveSession(getSession()); updateUrl(getSession()); refresh();
     }
     if (event.target.closest('[data-complete-session]')) {

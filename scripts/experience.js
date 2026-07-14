@@ -204,14 +204,117 @@ boot().catch((error) => { console.error(error); document.body.insertAdjacentHTML
 
 function initFloatingNarrative() {
   const flyer = qs('[data-floating-narrative]');
-  if (!flyer) return;
-  const update = () => {
+  const layer = flyer?.closest('.floating-narrative-layer');
+  const kitchen = qs('[data-kitchen-scene]');
+  if (!flyer || !layer || !kitchen) return;
+
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const state = {
+    mode: 'flying',
+    busy: false,
+    savedScroll: 0,
+    lastPose: { x: 0, y: 0, rotation: -8, scale: 1 },
+    startTime: performance.now(),
+    width: 0,
+    height: 0
+  };
+
+  const setPose = ({ x, y, rotation = -8, scale = 1, opacity = 0.88 }) => {
+    state.lastPose = { x, y, rotation, scale };
+    flyer.style.setProperty('--narrative-x', `${x}px`);
+    flyer.style.setProperty('--narrative-y', `${y}px`);
+    flyer.style.setProperty('--narrative-rotation', `${rotation}deg`);
+    flyer.style.setProperty('--narrative-scale', scale.toFixed(3));
+    flyer.style.opacity = opacity.toFixed(3);
+  };
+
+  const organicPose = (now) => {
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight);
     const progress = scrollY / maxScroll;
-    flyer.style.setProperty('--flight-progress', progress.toFixed(4));
+    const box = flyer.getBoundingClientRect();
+    const width = box.width || state.width || 160;
+    const height = box.height || state.height || 160;
+    state.width = width; state.height = height;
+    const t = (now - state.startTime) / 1000;
+    const mobile = matchMedia('(max-width: 767px)').matches;
+    const baseX = mobile ? innerWidth * (0.62 + progress * 0.16) : innerWidth * (0.08 + progress * 0.64);
+    const baseY = mobile ? innerHeight * (0.09 + progress * 0.78) : innerHeight * (0.14 + progress * 0.62);
+    const driftX = Math.sin(t * 0.37) * innerWidth * 0.035 + Math.sin(t * 0.113 + 1.8) * innerWidth * 0.026;
+    const driftY = Math.cos(t * 0.29 + 0.7) * innerHeight * 0.032 + Math.sin(t * 0.071) * innerHeight * 0.025;
+    return {
+      x: Math.min(innerWidth - width - 12, Math.max(12, baseX + driftX)),
+      y: Math.min(innerHeight - height - 12, Math.max(12, baseY + driftY)),
+      rotation: -6 + Math.sin(t * 0.23) * 7 + Math.cos(t * 0.097) * 3,
+      scale: 1 + Math.sin(t * 0.17) * 0.025,
+      opacity: mobile ? 0.62 : 0.88
+    };
   };
-  update();
-  addEventListener('scroll', update, { passive: true });
+
+  const tick = (now) => {
+    if (state.mode === 'flying' && !state.busy) setPose(organicPose(now));
+    requestAnimationFrame(tick);
+  };
+
+  const animatePortal = (direction) => {
+    if (reduceMotion.matches) return Promise.resolve();
+    const sign = direction === 'out' ? 1 : -1;
+    const duration = direction === 'out' ? 640 : 720;
+    const opacity = direction === 'out' ? [0.88, 0.66, 0] : [0, 0.64, 0.88];
+    const scale = direction === 'out' ? [1, 0.72, 0.18] : [0.18, 0.72, 1];
+    const frames = [
+      { transform: `translate3d(var(--narrative-x),var(--narrative-y),0) translate(0,0) rotate(${state.lastPose.rotation}deg) scale(${scale[0]})`, opacity: opacity[0] },
+      { transform: `translate3d(var(--narrative-x),var(--narrative-y),0) translate(${18 * sign}px,${-16 * sign}px) rotate(${state.lastPose.rotation + 115 * sign}deg) scale(${scale[1]})`, opacity: opacity[1], offset: 0.58 },
+      { transform: `translate3d(var(--narrative-x),var(--narrative-y),0) translate(0,0) rotate(${state.lastPose.rotation + 360 * sign}deg) scale(${scale[2]})`, opacity: opacity[2] }
+    ];
+    return flyer.animate(frames, { duration, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'forwards' }).finished;
+  };
+
+  const dockPose = () => {
+    const rect = kitchen.getBoundingClientRect();
+    const box = flyer.getBoundingClientRect();
+    return { x: rect.left + rect.width * 0.68 - box.width / 2, y: rect.top + rect.height * 0.28 - box.height / 2, rotation: -4, scale: 0.92, opacity: 0.9 };
+  };
+
+  const scrollToY = (top) => new Promise((resolve) => {
+    scrollTo({ top, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+    if (reduceMotion.matches) { resolve(); return; }
+    let stable = 0;
+    const check = () => {
+      stable = Math.abs(scrollY - top) < 2 ? stable + 1 : 0;
+      if (stable > 4) resolve(); else requestAnimationFrame(check);
+    };
+    check();
+  });
+
+  const jump = async () => {
+    if (state.busy) return;
+    state.busy = true;
+    layer.classList.add('is-transitioning');
+    flyer.setAttribute('aria-busy', 'true');
+    const goingToKitchen = state.mode === 'flying';
+    if (goingToKitchen) state.savedScroll = scrollY;
+    await animatePortal('out').catch(() => {});
+    const target = goingToKitchen ? kitchen.getBoundingClientRect().top + scrollY - Math.max(72, innerHeight * 0.12) : state.savedScroll;
+    await scrollToY(Math.max(0, target));
+    setPose(goingToKitchen ? dockPose() : organicPose(performance.now()));
+    await animatePortal('in').catch(() => {});
+    state.mode = goingToKitchen ? 'docked' : 'flying';
+    layer.classList.toggle('is-docked', state.mode === 'docked');
+    flyer.setAttribute('aria-pressed', String(state.mode === 'docked'));
+    flyer.alt = state.mode === 'docked' ? 'Navegador temporal: voltar ao ponto anterior' : 'Navegador temporal: ir para a cozinha pública';
+    flyer.removeAttribute('aria-busy');
+    layer.classList.remove('is-transitioning');
+    state.busy = false;
+  };
+
+  flyer.addEventListener('click', jump);
+  flyer.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      jump();
+    }
+  });
+  requestAnimationFrame(tick);
 }
 
 function pulseNarrative(reason = 'state') {

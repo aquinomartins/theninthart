@@ -18,6 +18,7 @@ async function loadJson(path) {
 
 async function boot() {
   hydrateAssetImages();
+  initFloatingNarrative();
   initScrollScenes();
   const dataset = { eras: await loadJson('data/eras.json'), parts: await loadJson('data/machine-parts.json'), objects: await loadJson('data/kitchen-objects.json'), panels: await loadJson('data/story-panels.json') };
   let publicSnapshot = await localPersistence.loadPublicSnapshot() || createPublicSnapshot(await localPersistence.loadSessions(), dataset.eras);
@@ -29,6 +30,7 @@ async function boot() {
   function renderAll() {
     const dominant = getDominantEra(session.vector, dataset.eras);
     document.documentElement.style.setProperty('--temporal-accent', dataset.parts.find((part) => session.selectedParts.includes(part.id))?.accent || dominant.theme.accent || '#0a84ff');
+    document.body.dataset.dominantEra = dominant.id;
     qs('[data-hero-subtitle]').textContent = heroLine(dominant, session);
     qs('[data-dominant-label]').textContent = `Estado dominante: ${dominant.label} · ${Math.round((session.vector[dominant.id] || 0) * 100)}%`;
     qs('[data-machine-summary]').textContent = dataset.parts.filter((part) => session.selectedParts.includes(part.id)).map((part) => part.summary).at(-1) || 'A máquina aguarda uma peça.';
@@ -109,6 +111,7 @@ function bindEvents(dataset, getSession, setSession, refresh) {
       const session = getSession(); const id = toggle.dataset.toggleObject;
       const selectedObjects = session.selectedObjects.includes(id) ? session.selectedObjects.filter((item) => item !== id) : [...session.selectedObjects, id];
       setSession(updateSession(session, dataset, { selectedObjects }));
+      pulseNarrative('object');
       await localPersistence.saveSession(getSession()); updateUrl(getSession()); refresh();
     }
     if (event.target.closest('[data-complete-session]')) {
@@ -197,3 +200,22 @@ function restoreFromUrl(dataset) {
 }
 
 boot().catch((error) => { console.error(error); document.body.insertAdjacentHTML('afterbegin', '<p role="alert" style="padding:1rem;background:#401;color:white">A experiência carregou em modo básico porque um recurso falhou.</p>'); });
+
+
+function initFloatingNarrative() {
+  const flyer = qs('[data-floating-narrative]');
+  if (!flyer) return;
+  const update = () => {
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    const progress = scrollY / maxScroll;
+    flyer.style.setProperty('--flight-progress', progress.toFixed(4));
+  };
+  update();
+  addEventListener('scroll', update, { passive: true });
+}
+
+function pulseNarrative(reason = 'state') {
+  document.body.dataset.narrativePulse = reason;
+  window.clearTimeout(pulseNarrative.timer);
+  pulseNarrative.timer = window.setTimeout(() => { delete document.body.dataset.narrativePulse; }, 900);
+}

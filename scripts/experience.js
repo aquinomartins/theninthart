@@ -40,6 +40,7 @@ async function boot() {
     qs('[data-public-pulse]').textContent = `Cozinha pública: ${Math.round(Math.max(...Object.values(publicSnapshot.vector)) * 100)}% em ${getDominantEra(publicSnapshot.vector, dataset.eras).label}.`;
     renderBars(qs('[data-bars="individual"]'), session.vector, dataset.eras);
     renderBars(qs('[data-bars="public"]'), publicSnapshot.vector, dataset.eras);
+    renderMachineCards(dataset, session);
     renderObjectList(dataset, session);
     renderKitchen(qs('[data-kitchen-scene]'), qs('[data-kitchen-status]'), dataset, session, publicSnapshot, dominant, createSeed(publicSnapshot));
     renderCredentialState(session.credentialStatus);
@@ -49,14 +50,16 @@ async function boot() {
   createDetailCarousel(qs('[data-machine-carousel]'), dataset.parts, (part, user) => {
     qs('[data-part-image]').src = assets[part.imageKey] || assets.mechanism;
     if (user && !session.selectedParts.includes(part.id)) {
-      session = updateSession(session, dataset, { selectedParts: [...session.selectedParts, part.id].slice(-5) });
+      session = selectMachinePart(session, dataset, part.id);
       persistAndRender();
     } else {
       renderAll();
     }
   });
 
+  renderMachineCards(dataset, session);
   renderObjectList(dataset, session);
+  bindMachineCards(dataset, () => session, (next) => { session = next; }, persistAndRender);
   bindEvents(dataset, () => session, (next) => { session = next; }, async () => { publicSnapshot = await refreshPublic(dataset); renderAll(); });
   initAdminPanel({ dialog: qs('[data-admin-dialog]'), dataset, persistence: localPersistence, onRestore: () => location.reload() });
   qs('[data-open-admin]')?.addEventListener('click', () => qs('[data-admin-dialog]').showModal());
@@ -69,6 +72,72 @@ function hydrateAssetImages() {
     const source = assets[image.dataset.assetKey];
     if (source && image.getAttribute('src') !== source) image.src = source;
   });
+}
+
+function renderMachineCards(dataset, session) {
+  const deck = qs('[data-machine-card-deck]');
+  if (!deck) return;
+  const activeId = session.selectedParts.at(-1) || dataset.parts[0]?.id;
+  const activeIndex = Math.max(0, dataset.parts.findIndex((part) => part.id === activeId));
+  deck.dataset.activeIndex = String(activeIndex);
+  deck.innerHTML = dataset.parts.map((part, index) => {
+    const selected = session.selectedParts.includes(part.id);
+    const weights = part.temporalWeights;
+    const offset = index - activeIndex;
+    return `<button class="machine-card ${selected ? 'is-selected' : ''} ${part.id === activeId ? 'is-active' : ''}" type="button" data-machine-card data-part-id="${part.id}" aria-pressed="${selected}" style="--card-accent:${part.accent};--deck-offset:${offset};--card-index:${index};--card-z:${20 - Math.abs(offset)};--card-depth:${(5 - Math.abs(offset)) * 4}">
+      <span class="machine-card__inner">
+        <span class="machine-card__media" aria-hidden="true"><img src="${assets[part.imageKey] || assets.mechanism}" alt="" loading="lazy" decoding="async"></span>
+        <span class="machine-card__content">
+          <span class="machine-card__category">${part.label}</span>
+          <strong>${part.name}</strong>
+          <span>${part.summary}</span>
+          <span class="machine-card__vector"><i>Passado ${Math.round(weights.past * 100)}%</i><i>Presente ${Math.round(weights.present * 100)}%</i><i>Futuro ${Math.round(weights.future * 100)}%</i></span>
+          <span class="machine-card__effect">Efeito: ${part.effect}</span>
+          <span class="machine-card__action">${selected ? 'Peça ativa na montagem' : 'Usar esta peça'}</span>
+        </span>
+      </span>
+    </button>`;
+  }).join('');
+  const active = dataset.parts[activeIndex];
+  const story = qs('[data-machine-feedback-story]');
+  const system = qs('[data-machine-feedback-system]');
+  if (active && story && system) {
+    story.textContent = `Hagia encaixou ${active.name} na máquina.`;
+    system.textContent = `Passado ${Math.round(active.temporalWeights.past * 100)}% · Presente ${Math.round(active.temporalWeights.present * 100)}% · Futuro ${Math.round(active.temporalWeights.future * 100)}%.`;
+  }
+}
+
+function bindMachineCards(dataset, getSession, setSession, persistAndRender) {
+  const deck = qs('[data-machine-card-deck]');
+  if (!deck) return;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  deck.addEventListener('click', async (event) => {
+    const card = event.target.closest('[data-machine-card]');
+    if (!card) return;
+    setSession(selectMachinePart(getSession(), dataset, card.dataset.partId));
+    pulseNarrative('machine');
+    await persistAndRender();
+  });
+  deck.addEventListener('pointermove', (event) => {
+    if (reduceMotion.matches) return;
+    const card = event.target.closest('[data-machine-card]');
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width - 0.5;
+    const py = (event.clientY - rect.top) / rect.height - 0.5;
+    card.style.setProperty('--tilt-x', `${(-py * 10).toFixed(2)}deg`);
+    card.style.setProperty('--tilt-y', `${(px * 16).toFixed(2)}deg`);
+    card.style.setProperty('--media-shift-x', `${(px * 8).toFixed(1)}px`);
+    card.style.setProperty('--media-shift-y', `${(py * 6).toFixed(1)}px`);
+  });
+  deck.addEventListener('pointerleave', () => qsa('[data-machine-card]', deck).forEach((card) => {
+    card.style.removeProperty('--tilt-x'); card.style.removeProperty('--tilt-y'); card.style.removeProperty('--media-shift-x'); card.style.removeProperty('--media-shift-y');
+  }));
+}
+
+function selectMachinePart(session, dataset, partId) {
+  const selectedParts = session.selectedParts.includes(partId) ? session.selectedParts : [...session.selectedParts, partId].slice(-5);
+  return updateSession(session, dataset, { selectedParts });
 }
 
 function renderObjectList(dataset, session) {
@@ -109,7 +178,7 @@ function bindEvents(dataset, getSession, setSession, refresh) {
     const toggle = event.target.closest('[data-toggle-object]');
     if (toggle) {
       const session = getSession(); const id = toggle.dataset.toggleObject;
-      const selectedObjects = session.selectedObjects.includes(id) ? session.selectedObjects.filter((item) => item !== id) : [...session.selectedObjects, id];
+      const selectedObjects = session.selectedObjects.includes(id) ? session.selectedObjects.filter((item) => item !== id) : [...session.selectedObjects, id].slice(-3);
       setSession(updateSession(session, dataset, { selectedObjects }));
       pulseNarrative('object');
       await localPersistence.saveSession(getSession()); updateUrl(getSession()); refresh();

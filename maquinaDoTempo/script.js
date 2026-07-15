@@ -1,3 +1,5 @@
+import { FloatingTimeGuideController } from './scripts/floating-time-guide.js';
+
 const revealElements = document.querySelectorAll('.reveal');
 
 if ('IntersectionObserver' in window) {
@@ -40,3 +42,17 @@ if (visualCarousel && visualCarouselPrev && visualCarouselNext) {
     visualCarousel.scrollBy({ left: getCarouselStep(), behavior: 'smooth' });
   });
 }
+
+
+const floatingTimeGuide = new FloatingTimeGuideController({
+  guide: document.querySelector('[data-floating-time-guide]'),
+  destination: document.querySelector('[data-time-machine-destination]'),
+  destinationAnchor: document.querySelector('[data-time-machine-guide-anchor]'),
+  status: document.querySelector('[data-floating-guide-status]'),
+  label: document.querySelector('[data-floating-guide-label]'),
+  exclusionSelector: '[data-floating-guide-exclusion]',
+  headerSelector: 'header, .experience-header',
+  context: 'maquinaDoTempo'
+});
+
+floatingTimeGuide.init();

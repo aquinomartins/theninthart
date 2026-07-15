@@ -16,10 +16,24 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://theninthart.com/" />
     <link rel="canonical" href="https://theninthart.com/" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <header class="site-header" aria-label="Primary navigation">
+
+    <div class="floating-time-guide-layer" data-floating-time-guide-layer>
+      <button
+        class="floating-time-guide"
+        type="button"
+        data-floating-time-guide
+        aria-label="Ir para a máquina do tempo"
+        aria-pressed="false"
+      >
+        <img src="../imagensPrompt/imagem01.png" alt="" aria-hidden="true" draggable="false" />
+        <span class="sr-only" data-floating-guide-label>Ir para a máquina do tempo</span>
+      </button>
+      <span class="sr-only" data-floating-guide-status aria-live="polite"></span>
+    </div>
+    <header class="site-header" aria-label="Primary navigation" data-floating-guide-exclusion>
       <a class="brand" href="#top" aria-label="The Ninth Art home">
         <span class="brand-mark" aria-hidden="true"></span>
         <span>The Ninth Art</span>
@@ -79,8 +93,28 @@
         </div>
 
         <div class="apple-like-grid">
-          <figure class="image-slot visual-slot-large">
-            <img src="images/imagem013.png" alt="" />
+          <figure
+            class="image-slot visual-slot-large time-machine-main-image"
+            data-image-slot="01"
+            data-time-machine-destination
+          >
+            <picture class="time-machine-main-image__picture">
+              <source media="(max-width: 767px)" srcset="./imagens/imagem018.png" />
+              <img
+                src="./imagens/imagem013.png"
+                width="900"
+                height="626"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+                alt="Máquina do tempo de Hagia e Pio"
+              />
+            </picture>
+            <span
+              class="time-machine-guide-anchor"
+              data-time-machine-guide-anchor
+              aria-hidden="true"
+            ></span>
             <figcaption>Image Slot 01</figcaption>
           </figure>
 
@@ -210,6 +244,6 @@
       <a href="mailto:contact@theninthart.com">contact@theninthart.com</a>
     </footer>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
   </body>
 </html>
